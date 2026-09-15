@@ -1,5 +1,7 @@
 #include "tablero.h"
-//#include <iostream>
+#include <iostream>
+
+using namespace std;
 
 tablero::tablero() {}
 
@@ -101,4 +103,115 @@ void guardarFicha(unsigned char *tablero, int indice, unsigned int ficha){
             //Extraemos la parte restante de la ficha y la colocamos en su posición
         tablero[byte+1] = tablero[byte+1] | static_cast<unsigned char>((ficha >> primerosBits) & mascara2);
     }
+}
+
+//Eliminar los bits que no pertenecen al tablero -invalidos-
+void limpiarBitsInvalidos(unsigned char *tablero, int filas, int columnas, int cantBytes){
+
+    //Cant de bits del tablero
+    int bitsValidos = filas * columnas * 3;
+    //Cant bits validos en ultimo byte
+    int resto = bitsValidos % 8;
+
+    if (resto != 0){
+
+        unsigned char mascara = static_cast<unsigned char>((1 << resto) -1);
+        tablero[cantBytes - 1] = tablero[cantBytes - 1] & mascara;
+    }
+    int bytesValidos = bytesUtilizados(filas, columnas);
+    for (int i = bytesValidos; i < cantBytes; ++i) {
+        tablero[i] = 0;
+    }
+}
+
+//Convertir los codigos de las fichas
+char codigoFicha(unsigned int ficha){
+
+    switch (ficha) {
+    case ficha1:
+        return 'T';
+
+    case ficha2:
+        return '#';
+
+    case ficha3:
+        return '%';
+
+    case ficha4:
+        return 'K';
+
+    case ficha5:
+        return '@';
+
+    case ficha6:
+        return '=';
+
+    case fichaEspecial:
+        return '*';
+
+    default: //fichaVacia
+        return '-';
+    }
+}
+
+//Imprimir tablero
+void imprimirTablero(const unsigned char *tablero, int filas, int columnas){
+
+    cout << "\n";
+
+    for (int i = 0; i < filas; ++i) {
+        for (int j = 0; j < columnas; ++j) {
+
+            //Indice logico -fila y columna-
+            int indice = i * columnas + j;
+
+            //Obtener bits de la ficha y convertirla en simbolo
+            unsigned int ficha = obtenerBitsFicha(tablero, indice);
+            char simbolo = codigoFicha(ficha);
+
+            cout << simbolo << "  ";
+
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+}
+
+//Imprimir representación binaria del tablero
+void imprimirBits(const unsigned char *tablero, int filas, int columnas){
+
+    int bitsValidos = filas * columnas * 3;
+
+    //Representacion de bits
+    cout << "\nRepresentacion compacta (fichas):\n";
+
+    for (int bit = 0; bit < bitsValidos; ++bit) {
+        //Determinar el byte en que esta ese bit y su posicion
+        int byte = bit / 8;
+        int pos = bit % 8;
+
+        unsigned int valor = (tablero[byte] >> pos) & 1;
+        cout << valor;
+
+        if ((bit + 1) % 3 == 0){
+            cout << " ";
+        }
+    }
+    cout << "\n";
+
+    //Imprimir bytes
+    int bytes = bytesUtilizados(filas, columnas);
+    cout << "\nBytes utilizados:\n";
+
+    for (int i = 0; i < bytes; ++i) {
+        cout << "Byte " << i << ": ";
+
+        //Imprimir cada byte desde el bit 7 al 0
+        for (int b = 7; b >= 0; --b) {
+            unsigned int valor = (tablero[i] >> b) & 1;
+            cout << valor;
+        }
+        cout << "\n";
+    }
+    cout << "\n";
 }

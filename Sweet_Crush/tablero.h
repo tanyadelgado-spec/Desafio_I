@@ -25,4 +25,12 @@ unsigned int obtenerBitsFicha(const unsigned char *tablero, int indice);
 
 void guardarFicha(unsigned char *tablero, int indice, unsigned int ficha);
 
+void limpiarBitsInvalidos(unsigned char *tablero, int filas, int columnas, int cantBytes);
+
+char codigoFicha(unsigned int ficha);
+
+void imprimirTablero(const unsigned char *tablero, int filas, int columnas);
+
+void imprimirBits(const unsigned char *tablero, int filas, int columnas);
+
 #endif
