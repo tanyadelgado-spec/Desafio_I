@@ -209,3 +209,305 @@ int identificarCombinaciones(const unsigned char *tablero, int filas, int column
     }
     return combinaciones;
 }
+
+//Eliminar las fichas marcadas
+int eliminarFichaMarcada (unsigned char *tablero, int filas, int columnas, const unsigned char *marcas){
+
+    int fichasEliminadas = 0;
+    int posiciones = filas * columnas;
+
+    for (int i = 0; i < posiciones; ++i) {
+        if (marcada(marcas, i)){
+            guardarFicha(tablero, i, fichaVacia);
+            fichasEliminadas++;
+        }
+    }
+    return fichasEliminadas;
+}
+
+//Metodo cascadas
+int cascadas(unsigned char *tablero, int filas, int columnas, int vacios,
+             int &combinacionesTotales, int &fichasEliminadas, int &puntuacion){
+
+    int cascadas = 0;
+    int posiciones = filas * columnas;
+    int bytesMarcas= (posiciones + 7) / 8;
+
+    unsigned char *marcas = new unsigned char [bytesMarcas];
+    int combinaciones;
+
+    do{
+        //En caso de eliminaciones o nuevos espacios, aplicamos desplazamiento vertical y rellenar
+        if (vacios){
+            desplazamientoVertical(tablero, filas, columnas);
+            rellenarVacios(tablero, filas, columnas);
+            vacios = 0;
+        }
+        combinaciones = identificarCombinaciones(tablero, filas, columnas, marcas);
+
+        if(combinaciones > 0){
+
+            int eliminadas = eliminarFichaMarcada(tablero, filas, columnas, marcas);
+
+            cascadas++;
+            combinacionesTotales += combinaciones;
+            fichasEliminadas += eliminadas;
+
+            //Puntuaciones. 5pts por ficha eliminada por el numero de cascadas; 20pts adicionales por cada combinación
+            puntuacion += eliminadas * 5 * cascadas;
+            puntuacion += combinaciones * 20;
+
+            vacios = 1;
+        }
+    }while (combinaciones > 0);
+
+    delete [] marcas;
+    return cascadas;
+}
+
+//Eliminacion de ficha por el usuario
+void usuarioEliminarFicha(unsigned char *tablero, int filas, int columnas, int fila, int columna, int &eliminacionUsuario,
+                          int &fichasEliminadas, int &combinacionesTotales, int &cascadasMov, int &puntuacion){
+
+    if(fila <= 0 || fila > filas || columna <= 0 || columna > columnas){
+        return;
+    }
+
+    int indice = fila * columnas + columna;
+    unsigned int ficha = obtenerBitsFicha(tablero, indice);
+
+    if(ficha > ficha6){
+        return;
+    }
+
+    //Eliminacion solicitada por consola
+    guardarFicha(tablero, indice, fichaVacia);
+    eliminacionUsuario++;
+    fichasEliminadas++;
+
+    //Puntuacion. 2pts adicionales por eliminacion especifica de ficha
+    puntuacion +=2;
+
+    //Posibles cascadas por eliminacion
+    cascadasMov = cascadas(tablero, filas, columnas, 1, combinacionesTotales, fichasEliminadas, puntuacion);
+}
+
+//Copia del tablero
+static void copiaTablero(unsigned char *destino, const unsigned char *origen, int filas, int columnas){
+    int total = filas * columnas;
+    for (int i = 0; i < total; ++i) {
+        unsigned int ficha = obtenerBitsFicha(origen, i);
+        guardarFicha(destino, i, ficha);
+    }
+}
+
+//Añadir fila
+void agregarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBytes, int fila){
+    fila = fila - 1;
+    if(fila < 0 || fila > filas){
+        return;
+    }
+
+    int actFilas = filas + 1;
+    int actBytes = bytesUtilizados(actFilas, columnas);
+
+    unsigned char *nueva = new unsigned char[actBytes];
+
+    for (int i = 0; i < actBytes; ++i) {
+        nueva [i] = 0;
+    }
+
+    for (int f = 0; f < actFilas; ++f) {
+        for (int c = 0; c < columnas; ++c) {
+
+            int actIndice = f * columnas + c;
+            if(f == fila){
+                guardarFicha(nueva, actIndice, fichaVacia);
+            }
+            else{
+                int fAnterior = (f < fila) ? f : f - 1;
+                int indiceAnterior = fAnterior * columnas + c;
+
+                unsigned int ficha = obtenerBitsFicha(tablero, indiceAnterior);
+                guardarFicha(nueva, actIndice, ficha);
+            }
+        }
+    }
+    delete [] tablero;
+    tablero = nueva;
+    filas = actFilas;
+    cantBytes = actBytes;
+
+    limpiarBitsInvalidos(tablero, filas, columnas, cantBytes);
+}
+
+//Eliminar fila
+void eliminarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBytes, int fila){
+    fila = fila - 1;
+
+    //Minimo una fila
+    if(filas <= 1){
+        return;
+    }
+
+    if(fila < 0 || fila >= filas){
+        return;
+    }
+
+    int actFilas = filas - 1;
+    int actBytes = bytesUtilizados(actFilas, columnas);
+
+    //Utilizacion respecto a memoria actual
+    double utilizacion = (3.0 * actFilas * columnas) / (8.0 * cantBytes);
+    if(utilizacion < 0.65){
+        //Reasignación de la memoria
+        unsigned char *nuevo = new unsigned char[actBytes];
+
+        for (int i = 0; i < actBytes; ++i) {
+            nuevo[i] = 0;
+        }
+
+        for (int f = 0; f < actFilas; ++f) {
+            int fAnterior = (f < fila) ? f : f + 1;
+            for (int c = 0; c < columnas; ++c) {
+                unsigned int ficha = obtenerBitsFicha(tablero, fAnterior * columnas + c);
+                guardarFicha(nuevo, f * columnas + c, ficha);
+            }
+        }
+        delete [] tablero;
+        tablero = nuevo;
+        cantBytes = actBytes;
+    }
+    else{
+
+        //Se conserva el bloque fisico
+        for (int f = 0; f < actFilas; ++f) {
+            int fAnterior = (f < fila) ? f : f + 1;
+            for (int c = 0; c < columnas; ++c) {
+                unsigned int ficha = obtenerBitsFicha(tablero, fAnterior * columnas + c);
+                guardarFicha(tablero, f * columnas + c, ficha);
+            }
+        }
+    }
+    filas = actFilas;
+    limpiarBitsInvalidos(tablero, filas, columnas, cantBytes);
+}
+
+//Añadir columna
+    void agregarColumna(unsigned char *&tablero, int filas, int &columnas, int &cantBytes, int columna){
+    columna = columna - 1;
+
+    if(columna < 0 || columna > columnas){
+        return;
+    }
+
+    int actColumnas = columnas + 1;
+    int actBytes = bytesUtilizados(filas, actColumnas);
+    unsigned char *nuevo = new unsigned char[actBytes];
+
+    for (int i = 0; i < actBytes; ++i) {
+        nuevo[i] = 0;
+    }
+
+    for (int f = 0; f < filas; ++f) {
+        for (int c = 0; c < actColumnas; ++c) {
+
+            int actIndice = f * actColumnas + c;
+            if(c == columnas){
+                guardarFicha(nuevo, actIndice, fichaVacia);
+            }
+            else{
+                int cAnterior = (c < columna) ? c : c - 1;
+                int indiceAnterior = f * columnas + cAnterior;
+
+                unsigned int ficha = obtenerBitsFicha(tablero, indiceAnterior);
+                guardarFicha(nuevo, actIndice, ficha);
+            }
+        }
+    }
+    delete [] tablero,
+        tablero = nuevo;
+    columnas = actColumnas;
+    cantBytes = actBytes;
+
+    limpiarBitsInvalidos(tablero, filas, columnas, cantBytes);
+}
+
+//Eliminar columna
+void eliminarColumna(unsigned char *&tablero, int filas, int &columnas, int &cantBytes, int columna){
+
+    columna = columna - 1;
+
+    //Minimo una columna
+    if(columnas <= 1){
+        return;
+    }
+
+    if(columna < 0 || columna >= columnas){
+        return;
+    }
+
+    int actColumnas = columnas - 1;
+    int actBytes = bytesUtilizados(filas, actColumnas);
+
+    double utilizacion = (3.0 * filas * actColumnas) / (8.0 * cantBytes);
+    if(utilizacion < 0.65){
+        unsigned char *nuevo = new unsigned char[actBytes];
+
+        for (int i = 0; i < actBytes; ++i) {
+            nuevo[i] = 0;
+        }
+
+        for (int f = 0; f < filas; ++f) {
+            for (int c = 0; c < actColumnas; ++c) {
+                int cAnterior = (c < columna) ? c : c + 1;
+
+                unsigned int ficha = obtenerBitsFicha(tablero, f * columnas + cAnterior);
+                guardarFicha(nuevo, f * actColumnas + c, ficha);
+            }
+        }
+        delete [] tablero;
+        tablero = nuevo;
+        cantBytes = actBytes;
+    }
+    else{
+        //Se conserva memoria actual
+        for (int f = 0; f < filas; ++f) {
+            for (int c = 0; c < actColumnas; ++c) {
+                int cAnterior = (c < columna) ? c : c + 1;
+
+                unsigned int ficha = obtenerBitsFicha(tablero, f * columnas + cAnterior);
+                guardarFicha(tablero, f * actColumnas + c, ficha);
+            }
+        }
+    }
+    columnas = actColumnas;
+    limpiarBitsInvalidos(tablero, filas, columnas, cantBytes);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
