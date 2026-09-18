@@ -1,23 +1,21 @@
+#include <ctime>
+
 #include "juego.h"
 #include "tablero.h"
 
 juego::juego() {}
 
 //Generador de numeros aleatorios (1, 6) -Generador Congruencial Lineal (GCL)-
-static unsigned int semilla = 123456789;
+static unsigned int semilla = static_cast<unsigned int>(time(nullptr));
 static int numAleatorio (int limite){
     semilla = semilla * 1103515245 + 12345;
-    int aleatorio = (semilla >> 16) % limite + 1;
+    int aleatorio = (semilla >> 16) % limite;
     return aleatorio;
 }
 
 //Comprobación de que una ficha genera combinaciones
 static bool formaCombinacion(const unsigned char *tablero, int filas, int columnas, int fila, int columna){
     unsigned int ficha = obtenerBitsFicha(tablero, fila * columnas + columna);
-
-    if (ficha > ficha6){
-        return false;
-    }
 
     int cant = 1;
     //Izquierda
@@ -52,7 +50,7 @@ static bool formaCombinacion(const unsigned char *tablero, int filas, int column
         cant++;
         a++;
     }
-    return cant >= 3;
+    return (cant >= 3);
 }
 
 //Rellenar tablero alatoriamente
@@ -73,9 +71,9 @@ void rellenarTableroA(unsigned char *tablero, int filas,int columnas){
 
 //Desplazamiento vertical -gravedad-
 void desplazamientoVertical(unsigned char *tablero, int filas, int columnas){
-    for (int columna = 0; columna < columnas; ++columna) {
 
-        int destino = filas -1;
+    for (int columna = 0; columna < columnas; ++columna) {
+        int destino = filas - 1;
 
         for (int fila = filas - 1; fila >= 0; --fila) {
 
@@ -89,7 +87,6 @@ void desplazamientoVertical(unsigned char *tablero, int filas, int columnas){
                 destino--;
             }
         }
-
         while (destino >= 0) {
             guardarFicha(tablero, destino *columnas + columna, fichaVacia);
             destino--;
@@ -195,7 +192,6 @@ int identificarCombinaciones(const unsigned char *tablero, int filas, int column
             while (fila < filas && obtenerBitsFicha(tablero, fila * columnas + columna) == ficha) {
                 cant++;
                 fila++;
-
             }
 
             if(cant >=3){
@@ -269,16 +265,8 @@ int cascadas(unsigned char *tablero, int filas, int columnas, int vacios,
 void usuarioEliminarFicha(unsigned char *tablero, int filas, int columnas, int fila, int columna, int &eliminacionUsuario,
                           int &fichasEliminadas, int &combinacionesTotales, int &cascadasMov, int &puntuacion){
 
-    if(fila <= 0 || fila > filas || columna <= 0 || columna > columnas){
-        return;
-    }
-
     int indice = fila * columnas + columna;
     unsigned int ficha = obtenerBitsFicha(tablero, indice);
-
-    if(ficha > ficha6){
-        return;
-    }
 
     //Eliminacion solicitada por consola
     guardarFicha(tablero, indice, fichaVacia);
@@ -303,10 +291,6 @@ static void copiaTablero(unsigned char *destino, const unsigned char *origen, in
 
 //Añadir fila
 void agregarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBytes, int fila){
-    fila = fila - 1;
-    if(fila < 0 || fila > filas){
-        return;
-    }
 
     int actFilas = filas + 1;
     int actBytes = bytesUtilizados(actFilas, columnas);
@@ -316,7 +300,6 @@ void agregarFila(unsigned char *&tablero, int &filas, int columnas, int &cantByt
     for (int i = 0; i < actBytes; ++i) {
         nueva [i] = 0;
     }
-
     for (int f = 0; f < actFilas; ++f) {
         for (int c = 0; c < columnas; ++c) {
 
@@ -343,14 +326,9 @@ void agregarFila(unsigned char *&tablero, int &filas, int columnas, int &cantByt
 
 //Eliminar fila
 void eliminarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBytes, int fila){
-    fila = fila - 1;
 
     //Minimo una fila
     if(filas <= 1){
-        return;
-    }
-
-    if(fila < 0 || fila >= filas){
         return;
     }
 
@@ -366,7 +344,6 @@ void eliminarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBy
         for (int i = 0; i < actBytes; ++i) {
             nuevo[i] = 0;
         }
-
         for (int f = 0; f < actFilas; ++f) {
             int fAnterior = (f < fila) ? f : f + 1;
             for (int c = 0; c < columnas; ++c) {
@@ -394,12 +371,7 @@ void eliminarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBy
 }
 
 //Añadir columna
-    void agregarColumna(unsigned char *&tablero, int filas, int &columnas, int &cantBytes, int columna){
-    columna = columna - 1;
-
-    if(columna < 0 || columna > columnas){
-        return;
-    }
+void agregarColumna(unsigned char *&tablero, int filas, int &columnas, int &cantBytes, int columna){
 
     int actColumnas = columnas + 1;
     int actBytes = bytesUtilizados(filas, actColumnas);
@@ -408,7 +380,6 @@ void eliminarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBy
     for (int i = 0; i < actBytes; ++i) {
         nuevo[i] = 0;
     }
-
     for (int f = 0; f < filas; ++f) {
         for (int c = 0; c < actColumnas; ++c) {
 
@@ -426,7 +397,7 @@ void eliminarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBy
         }
     }
     delete [] tablero,
-        tablero = nuevo;
+    tablero = nuevo;
     columnas = actColumnas;
     cantBytes = actBytes;
 
@@ -436,14 +407,8 @@ void eliminarFila(unsigned char *&tablero, int &filas, int columnas, int &cantBy
 //Eliminar columna
 void eliminarColumna(unsigned char *&tablero, int filas, int &columnas, int &cantBytes, int columna){
 
-    columna = columna - 1;
-
     //Minimo una columna
     if(columnas <= 1){
-        return;
-    }
-
-    if(columna < 0 || columna >= columnas){
         return;
     }
 
@@ -457,7 +422,6 @@ void eliminarColumna(unsigned char *&tablero, int filas, int &columnas, int &can
         for (int i = 0; i < actBytes; ++i) {
             nuevo[i] = 0;
         }
-
         for (int f = 0; f < filas; ++f) {
             for (int c = 0; c < actColumnas; ++c) {
                 int cAnterior = (c < columna) ? c : c + 1;
@@ -484,30 +448,3 @@ void eliminarColumna(unsigned char *&tablero, int filas, int &columnas, int &can
     columnas = actColumnas;
     limpiarBitsInvalidos(tablero, filas, columnas, cantBytes);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

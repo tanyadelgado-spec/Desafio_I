@@ -5,7 +5,6 @@ using namespace std;
 
 tablero::tablero() {}
 
-
 //Calcular los bytes a utilizar dadas las dimensiones del tablero
 int bytesUtilizados(int filas, int columnas){
 
@@ -14,7 +13,6 @@ int bytesUtilizados(int filas, int columnas){
     int bytes = (bits + 7) / 8; //Redondeo hacia arriba por si el # de bits genera division no exacta entre 8 (bits+(n-1))/n
 
     return bytes;
-
 }
 
 //Generar tablero de juego
@@ -28,10 +26,9 @@ void crearTablero(unsigned char *&tablero, int filas, int columnas, int &cantByt
         tablero[i] = 0;
     }
 
-    int totalPos = filas * columnas;
-
+    int posiciones = filas * columnas;
     //Inicializar cada posicion con la ficha vacia (6 = 110)
-    for (int i = 0; i < totalPos; ++i) {
+    for (int i = 0; i < posiciones; ++i) {
         guardarFicha(tablero, i, fichaVacia);
     }
 }
@@ -59,7 +56,6 @@ unsigned int obtenerBitsFicha(const unsigned char *tablero, int indice){
         //Unir ambas partes de bits
         valor = part1 | (part2 << primerosBits);
     }
-
     return valor & 7; //Asegurar que solo se devuelvan 3bits
 }
 
@@ -119,6 +115,7 @@ void limpiarBitsInvalidos(unsigned char *tablero, int filas, int columnas, int c
         tablero[cantBytes - 1] = tablero[cantBytes - 1] & mascara;
     }
     int bytesValidos = bytesUtilizados(filas, columnas);
+
     for (int i = bytesValidos; i < cantBytes; ++i) {
         tablero[i] = 0;
     }
@@ -146,11 +143,14 @@ char codigoFicha(unsigned int ficha){
     case ficha6:
         return '=';
 
+    case fichaVacia:
+        return '-';
+
     case fichaEspecial:
         return '*';
 
-    default: //fichaVacia
-        return '-';
+    default:
+        return '/';
     }
 }
 
@@ -158,8 +158,21 @@ char codigoFicha(unsigned int ficha){
 void imprimirTablero(const unsigned char *tablero, int filas, int columnas){
 
     cout << "\n";
+    //Indice de las columnas
+    for (int j = 1; j <= columnas; ++j) {
+        if(j > 1){
+            cout << j << "  ";
+        }
+        else{
+            cout << "     " << j << "  ";
+        }
+    }
+    cout << "\n";
 
     for (int i = 0; i < filas; ++i) {
+        //Indice de las filas
+        cout << "  " << i + 1 << "  ";
+
         for (int j = 0; j < columnas; ++j) {
 
             //Indice logico -fila y columna-
